@@ -200,6 +200,15 @@ export class Gauge {
   }
 }
 
+export function gaugeValue(
+  series: DatadogSeries,
+): {tsSec: number; value: number} | undefined {
+  if (series.points.length === 0) {
+    return undefined;
+  }
+  return {tsSec: series.points[0][0], value: series.points[0][1][0]};
+}
+
 function t() {
   return Math.round(new Date().getTime() / 1000);
 }

@@ -5,5 +5,6 @@ export {
   ReporterOptions,
   DatadogPoint,
   DatadogSeries,
+  gaugeValue,
   report,
 } from './metrics/metrics';

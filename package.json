@@ -22,7 +22,7 @@
     "node": ">=16.14.0 || >=17.1"
   },
   "bin": {
-    "reflect": "out/cli.js"
+    "report-metrics": "out/report-metrics.js"
   },
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.2.0",
@@ -40,7 +40,7 @@
   "files": [
     "out/datadog-utils.d.ts",
     "out/datadog-utils.js",
-    "out/cli.js"
+    "out/report-metrics.js"
   ],
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"

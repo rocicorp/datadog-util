@@ -1,6 +1,6 @@
 import {jest, afterEach, beforeEach, test, expect} from '@jest/globals';
 import type {SpyInstance} from 'jest-mock';
-import {Metrics, Reporter, Gauge} from './metrics.js';
+import {Metrics, Reporter, Gauge, gaugeValue} from './metrics.js';
 
 let fetchSpy: SpyInstance<typeof fetch>;
 
@@ -206,5 +206,16 @@ test('Gauge', () => {
   expect(g.flush()).toMatchObject({
     metric: 'name',
     points: [[42, [4]]],
+  });
+});
+
+test('gaugeValue', () => {
+  const g = new Gauge('name');
+  expect(gaugeValue(g.flush())).toBeUndefined();
+
+  g.set(3);
+  expect(gaugeValue(g.flush())).toMatchObject({
+    tsSec: 42,
+    value: 3,
   });
 });

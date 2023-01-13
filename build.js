@@ -16,6 +16,14 @@ function buildESM() {
   });
 }
 
+function buildMetricsCLI() {
+  return buildInternal({
+    format: 'esm',
+    entryPoints: [path.join(__dirname, 'tool', 'report-metrics.ts')],
+    outfile: path.join(__dirname, 'out', 'report-metrics.js'),
+  });
+}
+
 /**
  * @param {Partial<import("esbuild").BuildOptions>} options
  */
@@ -30,7 +38,7 @@ function buildInternal(options) {
 
 try {
   // @ts-ignore
-  await Promise.all([buildESM()]);
+  await Promise.all([buildESM(), buildMetricsCLI()]);
 } catch {
   process.exitCode = 1;
 }
