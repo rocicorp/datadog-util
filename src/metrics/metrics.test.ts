@@ -1,6 +1,7 @@
 import {jest, afterEach, beforeEach, test, expect} from '@jest/globals';
 import type {SpyInstance} from 'jest-mock';
 import {Metrics, Reporter, Gauge, gaugeValue} from './metrics.js';
+import {Response} from 'cross-fetch';
 
 let fetchSpy: SpyInstance<typeof fetch>;
 
