@@ -7,4 +7,4 @@ export {
   DatadogSeries,
   gaugeValue,
   report,
-} from './metrics/metrics';
+} from './metrics/metrics.js';

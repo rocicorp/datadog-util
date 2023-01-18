@@ -19,13 +19,13 @@
     "prepack": "npm run lint && npm run test && npm run build"
   },
   "engines": {
-    "node": ">=16.14.0 || >=17.1"
+    "node": ">=17.5"
   },
   "bin": {
     "report-metrics": "out/report-metrics.js"
   },
   "devDependencies": {
-    "@rocicorp/eslint-config": "^0.2.0",
+    "@rocicorp/eslint-config": "^0.3.0",
     "@rocicorp/logger": "^2.2.0",
     "@rocicorp/prettier-config": "^0.1.1",
     "@types/jest": "^27.5.0",

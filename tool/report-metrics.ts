@@ -6,7 +6,7 @@ import {gaugeValue, Metrics, report} from '../src/metrics/metrics.js';
 // metrics on the Datadog side. It's not intended to be a good example of how to
 // use the metrics library. Start this script and then go to the Datadog dashboard
 // and build or play with a dashboard over the test_latency metric. There will be
-// one data point per "client" per sample itnterval. To create a stack graph of the data
+// one data point per "client" per sample interval. To create a stack graph of the data
 // with one data point per client per sample interval, use the count aggregator
 // and a rollup over the sample period. For example, if the sample interval is 20s,
 // you can compute the number of clients with latency <20 using:
@@ -53,8 +53,7 @@ for (let i = 0; i < NUM_CLIENTS; i++) {
   latencies.push(l);
 }
 
-// eslint-disable-next-line no-constant-condition
-while (true) {
+for (;;) {
   // We have to refresh the gauge each time so a new timestamp and thus data point
   // is created.
   for (const l of latencies) {
@@ -96,8 +95,8 @@ while (true) {
   }
 }
 
-function sleep(ms = 0, setTimeout = globalThis.setTimeout) {
-  return new Promise<void>(resolve => setTimeout(resolve, ms));
+function sleep(ms = 0, setTimeout = globalThis.setTimeout): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // The min and max are inclusive.

@@ -28,7 +28,7 @@ test('Reporter reports', () => {
   new Reporter({
     datadogApiKey: 'apiKey',
     metrics: m,
-    intervalSecs: 1,
+    intervalMs: 1 * 1000,
   });
 
   jest.advanceTimersByTime(1000);
@@ -69,7 +69,7 @@ test('Reporter logs an error on error', async () => {
   new Reporter({
     datadogApiKey: 'apiKey',
     metrics: m,
-    intervalSecs: 1,
+    intervalMs: 1 * 1000,
     logSink,
   });
 
@@ -111,7 +111,7 @@ test('Reporter stops when abort is signaled', () => {
     abortSignal: ac.signal,
     datadogApiKey: 'apiKey',
     metrics: m,
-    intervalSecs: 1,
+    intervalMs: 1 * 1000,
   });
 
   jest.setSystemTime(43000);

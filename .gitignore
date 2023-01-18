@@ -13,6 +13,6 @@
 npm-debug.log*
 
 # pack output
-reflect-*.tgz
+datadog-util*.tgz
 
 tsconfig.tsbuildinfo

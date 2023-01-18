@@ -5,6 +5,7 @@
 
     "strict": true,
     "noUnusedLocals": true,
+    "exactOptionalPropertyTypes": true,
 
     "noUnusedParameters": true,
     "noImplicitReturns": true,
@@ -15,7 +16,7 @@
 
     "declaration": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodeNext",
     "outDir": "out",
     "allowJs": true,
 

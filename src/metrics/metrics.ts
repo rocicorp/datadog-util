@@ -3,33 +3,35 @@ import type {LogSink} from '@rocicorp/logger';
 export interface ReporterOptions {
   datadogApiKey: string;
   metrics: Metrics;
-  // intervalSecs defaults to 2 minutes.
-  intervalSecs?: number;
-  abortSignal?: AbortSignal;
+  // intervalMs defaults to 2 minutes.
+  intervalMs?: number | undefined;
+  abortSignal?: AbortSignal | undefined;
   // If a LogSink is not provided, the Reporter is silent.
-  logSink?: LogSink;
+  logSink?: LogSink | undefined;
   // Should probably also take tags (eg, env, version). Will
   // probalby need to take host and service too for the server side.
 }
 
-// Reporter periodically reports metrics to Datadog. It uses an interval
-// instead of a timer because we want to keep to the desired interval as
-// closely as possible. A typical pattern for sampling a client is for the
-// client to report metrics on a given interval and then rollup metrics on
-// the server on the same interval. The extent to which the interval drifts
-// skews the counts seen by the server.
+/**
+ * Reporter periodically reports metrics to Datadog. It uses an interval
+ * instead of a timer because we want to keep to the desired interval as
+ * closely as possible. A typical pattern for sampling a client is for the
+ * client to report metrics on a given interval and then rollup metrics on
+ * the server on the same interval. The extent to which the interval drifts
+ * skews the counts seen by the server.
+ */
 export class Reporter {
-  private _metrics: Metrics;
-  private _apiKey: string;
-  private _intervalSecs: number;
+  private readonly _metrics: Metrics;
+  private readonly _apiKey: string;
+  private readonly _intervalMs: number;
   private _intervalID: ReturnType<typeof setInterval> | 0 = 0;
-  private _abortSignal: AbortSignal | undefined;
-  private _logSink: LogSink | undefined;
+  private readonly _abortSignal: AbortSignal | undefined;
+  private readonly _logSink: LogSink | undefined;
 
   constructor(options: ReporterOptions) {
     this._metrics = options.metrics;
     this._apiKey = options.datadogApiKey;
-    this._intervalSecs = options.intervalSecs || 2 * 60;
+    this._intervalMs = options.intervalMs || 2 * 60 * 1000; // 2 minutes.
     this._abortSignal = options.abortSignal;
     this._logSink = options.logSink;
 
@@ -48,10 +50,9 @@ export class Reporter {
       return;
     }
 
-    // eslint-disable-next-line require-await
-    this._intervalID = setInterval(async () => {
+    this._intervalID = setInterval(() => {
       void this.report();
-    }, this._intervalSecs * 1000);
+    }, this._intervalMs);
 
     this._maybeLogDebug('Metrics Reporter starter');
   }
@@ -63,7 +64,7 @@ export class Reporter {
     }
   }
 
-  public async report() {
+  async report() {
     const allSeries = this._metrics.flush();
     if (allSeries.length === 0) {
       this._maybeLogDebug('No metrics to report');
@@ -123,8 +124,10 @@ export async function report(
   return res;
 }
 
-// Metrics keeps track of the set of metrics in use and flushes them
-// to a format suitable for reporting to Datadog.
+/**
+ * Metrics keeps track of the set of metrics in use and flushes them
+ * to a format suitable for reporting to Datadog.
+ */
 export class Metrics {
   // We currently only support Gauge metrics.
   private _gauges: Map<string, Gauge> = new Map();
@@ -153,36 +156,41 @@ export class Metrics {
 }
 
 // These two types are Datadog's. Yeah, I don't like them either.
-// DatadogSeries is a time series of points for a single metric.
+
+/** DatadogSeries is a time series of points for a single metric. */
 export type DatadogSeries = {
   metric: string; // We call this 'name' bc 'metric' is overloaded in code.
   points: DatadogPoint[];
 };
-// A point is a second-resolution timestamp and a set of values for that
-// timestamp. A point represents exactly one second in time and the values
-// are those recorded for that second. The first element of this array
-// is the timestamp and the second element is an array of values.
+/**
+ * A point is a second-resolution timestamp and a set of values for that
+ * timestamp. A point represents exactly one second in time and the values
+ * are those recorded for that second. The first element of this array
+ * is the timestamp and the second element is an array of values.
+ */
 export type DatadogPoint = [number, number[]];
 
 function newDatadagPoint(ts: number, value: number): DatadogPoint {
   return [ts, [value]];
 }
 
-// Gauge is a metric type that represents a single value that can go up and
-// down. It's typically used to track discrete values or counts eg the number
-// of active users, number of connections, cpu load, etc. A gauge retains
-// its value when flushed.
-//
-// We use a Gauge to sample at the client. If we are interested in tracking
-// a metric value *per client*, the client can note the latest value in
-// a Gauge metric. The metric is periodically reported to Datadog. On the
-// server, we graph the value of the metric rolled up over the periodic
-// reporting period, that is, counted over a span of time equal to the
-// reporting period. The result is ~one point per client per reporting
-// period.
+/**
+ * Gauge is a metric type that represents a single value that can go up and
+ * down. It's typically used to track discrete values or counts eg the number
+ * of active users, number of connections, cpu load, etc. A gauge retains
+ * its value when flushed.
+ *
+ * We use a Gauge to sample at the client. If we are interested in tracking
+ * a metric value *per client*, the client can note the latest value in
+ * a Gauge metric. The metric is periodically reported to Datadog. On the
+ * server, we graph the value of the metric rolled up over the periodic
+ * reporting period, that is, counted over a span of time equal to the
+ * reporting period. The result is ~one point per client per reporting
+ * period.
+ */
 export class Gauge {
-  private _name: string;
-  private _point: DatadogPoint | undefined;
+  private readonly _name: string;
+  private _point: DatadogPoint | undefined = undefined;
 
   constructor(name: string) {
     this._name = name;
