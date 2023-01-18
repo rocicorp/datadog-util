@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "exactOptionalPropertyTypes": true,
+
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+
+    "importsNotUsedAsValues": "error",
+
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "nodeNext",
+    "outDir": "out",
+    "allowJs": true,
+
+    "lib": ["esnext", "dom"],
+    "skipLibCheck": true,
+
+    "resolveJsonModule": true,
+    "incremental": true,
+    "baseUrl": "."
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "out"]
+}
