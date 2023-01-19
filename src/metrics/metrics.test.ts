@@ -2,6 +2,7 @@ import {jest, afterEach, beforeEach, test, expect} from '@jest/globals';
 import type {SpyInstance} from 'jest-mock';
 import {Metrics, Reporter, Gauge, gaugeValue} from './metrics.js';
 import {Response} from 'cross-fetch';
+import {OptionalLoggerImpl} from '@rocicorp/logger';
 
 let fetchSpy: SpyInstance<typeof fetch>;
 
@@ -58,10 +59,12 @@ test('Reporter logs an error on error', async () => {
   // Note: it only reports if there is data to report.
   const m = newMetricsWithDataToReport();
   const logSink = {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     log: jest.fn().mockImplementation(() => {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
     }),
   };
+  const optionalLogger = new OptionalLoggerImpl(logSink);
   fetchSpy.mockImplementation(() => {
     throw new Error('boom');
   });
@@ -70,7 +73,7 @@ test('Reporter logs an error on error', async () => {
     datadogApiKey: 'apiKey',
     metrics: m,
     intervalMs: 1 * 1000,
-    logSink,
+    optionalLogger,
   });
 
   jest.setSystemTime(43000);
