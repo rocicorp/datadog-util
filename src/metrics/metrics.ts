@@ -1,4 +1,4 @@
-import type {LogSink} from '@rocicorp/logger';
+import type {OptionalLogger} from '@rocicorp/logger';
 
 export interface ReporterOptions {
   datadogApiKey: string;
@@ -6,8 +6,8 @@ export interface ReporterOptions {
   // intervalMs defaults to 2 minutes.
   intervalMs?: number | undefined;
   abortSignal?: AbortSignal | undefined;
-  // If a LogSink is not provided, the Reporter is silent.
-  logSink?: LogSink | undefined;
+  // If a OptionalLogger is not provided, the Reporter is silent.
+  optionalLogger?: OptionalLogger | undefined;
   // Should probably also take tags (eg, env, version). Will
   // probalby need to take host and service too for the server side.
 }
@@ -26,19 +26,19 @@ export class Reporter {
   private readonly _intervalMs: number;
   private _intervalID: ReturnType<typeof setInterval> | 0 = 0;
   private readonly _abortSignal: AbortSignal | undefined;
-  private readonly _logSink: LogSink | undefined;
+  private readonly _logger: OptionalLogger | undefined;
 
   constructor(options: ReporterOptions) {
     this._metrics = options.metrics;
     this._apiKey = options.datadogApiKey;
     this._intervalMs = options.intervalMs || 2 * 60 * 1000; // 2 minutes.
     this._abortSignal = options.abortSignal;
-    this._logSink = options.logSink;
+    this._logger = options.optionalLogger;
 
     if (this._abortSignal !== undefined) {
       this._abortSignal.addEventListener('abort', () => {
         this._stopInterval();
-        this._maybeLogDebug('Metrics Reporter aborted');
+        this._logger?.debug?.('Metrics Reporter aborted');
       });
     }
 
@@ -54,7 +54,7 @@ export class Reporter {
       void this.report();
     }, this._intervalMs);
 
-    this._maybeLogDebug('Metrics Reporter starter');
+    this._logger?.debug?.('Metrics Reporter starter');
   }
 
   private _stopInterval() {
@@ -67,7 +67,7 @@ export class Reporter {
   async report() {
     const allSeries = this._metrics.flush();
     if (allSeries.length === 0) {
-      this._maybeLogDebug('No metrics to report');
+      this._logger?.debug?.('No metrics to report');
       return;
     }
 
@@ -76,16 +76,8 @@ export class Reporter {
       await report(this._apiKey, allSeries);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
-      this._maybeLogError(`Error reporting metrics: ${e}`);
+      this._logger?.error?.(`Error reporting metrics: ${e}`);
     }
-  }
-
-  private _maybeLogDebug(msg: string) {
-    this._logSink?.log('debug', msg);
-  }
-
-  private _maybeLogError(msg: string) {
-    this._logSink?.log('error', msg);
   }
 }
 
@@ -218,5 +210,5 @@ export function gaugeValue(
 }
 
 function t() {
-  return Math.round(new Date().getTime() / 1000);
+  return Math.round(Date.now() / 1000);
 }
