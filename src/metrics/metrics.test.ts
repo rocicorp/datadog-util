@@ -1,6 +1,13 @@
 import {jest, afterEach, beforeEach, test, expect} from '@jest/globals';
 import type {SpyInstance} from 'jest-mock';
-import {Metrics, Reporter, Gauge, gaugeValue} from './metrics.js';
+import {
+  Metrics,
+  Reporter,
+  Gauge,
+  gaugeValue,
+  DD_AUTH_HEADER_NAME,
+  DD_DISTRIBUTION_METRIC_URL,
+} from './metrics.js';
 import {Response} from 'cross-fetch';
 import {OptionalLoggerImpl} from '@rocicorp/logger';
 
@@ -18,6 +25,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.restoreAllMocks();
+  jest.useRealTimers();
 });
 
 test('Reporter reports', () => {
@@ -26,25 +34,23 @@ test('Reporter reports', () => {
   const m = newMetricsWithDataToReport();
   const g = m.gauge('name');
   const expectedSeries = [g.flush()];
+  const headers = {[DD_AUTH_HEADER_NAME]: 'apiKey'};
   new Reporter({
-    datadogApiKey: 'apiKey',
+    url: DD_DISTRIBUTION_METRIC_URL,
     metrics: m,
+    headers,
     intervalMs: 1 * 1000,
   });
 
   jest.advanceTimersByTime(1000);
 
   expect(fetchSpy).toHaveBeenCalledTimes(1);
-  expect(fetchSpy).toHaveBeenCalledWith(
-    'https://api.datadoghq.com/api/v1/distribution_points',
-    {
-      body: JSON.stringify({series: expectedSeries}),
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      headers: {'DD-API-KEY': 'apiKey', 'Content-Type': 'application/json'},
-      signal: null,
-      method: 'POST',
-    },
-  );
+  expect(fetchSpy).toHaveBeenCalledWith(DD_DISTRIBUTION_METRIC_URL, {
+    body: JSON.stringify({series: expectedSeries}),
+    headers: {'DD-API-KEY': 'apiKey', 'Content-Type': 'application/json'},
+    signal: null,
+    method: 'POST',
+  });
 });
 
 function newMetricsWithDataToReport() {
@@ -67,9 +73,11 @@ test('Reporter logs an error on error', async () => {
     throw new Error('boom');
   });
 
+  const headers = {[DD_AUTH_HEADER_NAME]: 'apiKey'};
   new Reporter({
-    datadogApiKey: 'apiKey',
     metrics: m,
+    url: DD_DISTRIBUTION_METRIC_URL,
+    headers,
     intervalMs: 1 * 1000,
     optionalLogger,
   });
@@ -97,7 +105,11 @@ async function microtasksUntil(p: () => boolean) {
 }
 
 test('Reporter does not report if no series to report', async () => {
-  const r = new Reporter({datadogApiKey: 'apiKey', metrics: new Metrics()});
+  const r = new Reporter({
+    metrics: new Metrics(),
+    url: DD_DISTRIBUTION_METRIC_URL,
+    headers: {[DD_AUTH_HEADER_NAME]: 'apiKey'},
+  });
   await r.report();
   expect(fetchSpy).not.toHaveBeenCalled();
 });
@@ -109,8 +121,9 @@ test('Reporter stops when abort is signaled', () => {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   new Reporter({
+    url: DD_DISTRIBUTION_METRIC_URL,
     abortSignal: ac.signal,
-    datadogApiKey: 'apiKey',
+    headers: {[DD_AUTH_HEADER_NAME]: 'apiKey'},
     metrics: m,
     intervalMs: 1 * 1000,
   });

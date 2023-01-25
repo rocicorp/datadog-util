@@ -1,6 +1,12 @@
 #! /usr/bin/env node
 
-import {gaugeValue, Metrics, report} from '../src/metrics/metrics.js';
+import {
+  DD_AUTH_HEADER_NAME,
+  DD_DISTRIBUTION_METRIC_URL,
+  gaugeValue,
+  Metrics,
+  report,
+} from '../src/metrics/metrics.js';
 
 // This is a very basic and not-polished script to test receiving and graphing
 // metrics on the Datadog side. It's not intended to be a good example of how to
@@ -9,10 +15,10 @@ import {gaugeValue, Metrics, report} from '../src/metrics/metrics.js';
 // one data point per "client" per sample interval. To create a stack graph of the data
 // with one data point per client per sample interval, use the count aggregator
 // and a rollup over the sample period. For example, if the sample interval is 20s,
-// you can compute the number of clients with latency <20 using:
-//    count(v: v<=20):test_latency{*}.as_count().rollup(20)
+// you can compute the number of clients with latency <20s using:
+//    count(v: v<=20000):test_latency_ms{*}.as_count().rollup(20)
 // Note you probably have to enable advanced:percentiles for the metric, you can
-// do so in datadog under Metrics > Summary after searching for 'test_latency'.
+// do so in datadog under Metrics > Summary after searching for 'test_latency_ms'.
 //
 // This is modeled as measuring latency to connect to a server, with some clients
 // that never connect. The script starts all clients in the never connected state
@@ -26,7 +32,11 @@ import {gaugeValue, Metrics, report} from '../src/metrics/metrics.js';
 // in counts of clients with latency < 20s and < 100s as they are randomly reconnected.
 // At all times the total number of data points in the sample period should be equal or
 // close to NUM_CLIENTS.
-const LATENCY_NEVER = 600;
+//
+// Note that the datadog endpoint does not support CORS so this works from the command
+// line but will not work directly from the browser. One option is to proxy calls through
+// a server, which is a good idea anyway to aggregate datapoints.
+const LATENCY_NEVER_MS = 600 * 1000;
 const NUM_CLIENTS = 20;
 const NUM_CONNECT_NEVER = 5;
 const NUM_CONNECT_FAST = 10;
@@ -48,8 +58,8 @@ for (let i = 0; i < NUM_CLIENTS; i++) {
 // Each client has its own Gauge.
 const latencies = [];
 for (let i = 0; i < NUM_CLIENTS; i++) {
-  const l = metrics[i].gauge('test_latency');
-  l.set(LATENCY_NEVER);
+  const l = metrics[i].gauge('test_latency_ms');
+  l.set(LATENCY_NEVER_MS);
   latencies.push(l);
 }
 
@@ -66,9 +76,9 @@ for (;;) {
   const l = latencies[i];
   // Set its connection latency.
   if (i >= NUM_CONNECT_NEVER && i < NUM_CONNECT_NEVER + NUM_CONNECT_FAST) {
-    l.set(randInt(1, 20));
+    l.set(randInt(1, 20 * 1000));
   } else {
-    l.set(randInt(1, 100));
+    l.set(randInt(1, 100 * 1000));
   }
 
   await sleep(SAMPLE_INTERVAL_MS);
@@ -82,7 +92,11 @@ for (;;) {
     console.log(logLine);
 
     const f = async () => {
-      const resp = await report(apiKey, m.flush());
+      const resp = await report(
+        DD_DISTRIBUTION_METRIC_URL,
+        {[DD_AUTH_HEADER_NAME]: apiKey},
+        m.flush(),
+      );
       console.log(resp.ok, JSON.stringify(await resp.json()));
     };
     promises.push(f());
