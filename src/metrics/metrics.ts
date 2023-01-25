@@ -1,19 +1,22 @@
 import type {OptionalLogger} from '@rocicorp/logger';
 
 export interface ReporterOptions {
-  datadogApiKey: string;
   metrics: Metrics;
+  // url can be set to DD_DISTRIBUTION_METRIC_URL for Datadog.
+  url: string;
+  // headers can be used to pass auth headers to the server.
+  headers?: Record<string, string>;
   // intervalMs defaults to 2 minutes.
   intervalMs?: number | undefined;
   abortSignal?: AbortSignal | undefined;
   // If a OptionalLogger is not provided, the Reporter is silent.
   optionalLogger?: OptionalLogger | undefined;
-  // Should probably also take tags (eg, env, version). Will
+  // TODO Should probably also take tags (eg, env, version). Will
   // probalby need to take host and service too for the server side.
 }
 
 /**
- * Reporter periodically reports metrics to Datadog. It uses an interval
+ * Reporter periodically reports metrics to an HTTP endpoint. It uses an interval
  * instead of a timer because we want to keep to the desired interval as
  * closely as possible. A typical pattern for sampling a client is for the
  * client to report metrics on a given interval and then rollup metrics on
@@ -22,7 +25,8 @@ export interface ReporterOptions {
  */
 export class Reporter {
   private readonly _metrics: Metrics;
-  private readonly _apiKey: string;
+  private readonly _url: string;
+  private readonly _headers: Record<string, string>;
   private readonly _intervalMs: number;
   private _intervalID: ReturnType<typeof setInterval> | 0 = 0;
   private readonly _abortSignal: AbortSignal | undefined;
@@ -30,7 +34,8 @@ export class Reporter {
 
   constructor(options: ReporterOptions) {
     this._metrics = options.metrics;
-    this._apiKey = options.datadogApiKey;
+    this._url = options.url;
+    this._headers = options.headers || {};
     this._intervalMs = options.intervalMs || 2 * 60 * 1000; // 2 minutes.
     this._abortSignal = options.abortSignal;
     this._logger = options.optionalLogger;
@@ -73,7 +78,7 @@ export class Reporter {
 
     try {
       // TODO add a timeout to the fetch.
-      await report(this._apiKey, allSeries);
+      await report(this._url, this._headers, allSeries);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       this._logger?.error?.(`Error reporting metrics: ${e}`);
@@ -86,24 +91,27 @@ export class Reporter {
 // metric types. (It expects that they have been pre-aggregated eg by statsd.)
 // So if we submitted non-distribution metrics and two clients (or DOs)
 // reported a metric in the same second, we'd lose one of them.
-const DD_DISTRIBUTION_METRIC_URL =
+export const DD_DISTRIBUTION_METRIC_URL =
   'https://api.datadoghq.com/api/v1/distribution_points';
+export const DD_AUTH_HEADER_NAME = 'DD-API-KEY';
 
 // report sends a set of metrics to Datadog. It throws unless the server
 // returns 200.
 export async function report(
-  apiKey: string,
+  url: string,
+  extraHeaders: Record<string, string>,
   allSeries: DatadogSeries[],
   abortSignal?: AbortSignal,
 ) {
+  const headers = {
+    // Note: no compression atm.
+    'Content-Type': 'application/json',
+    ...extraHeaders,
+  };
   const body = JSON.stringify({series: allSeries});
-  const res = await fetch(DD_DISTRIBUTION_METRIC_URL, {
+  const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      // Note: no compression atm.
-      'Content-Type': 'application/json',
-      'DD-API-KEY': apiKey,
-    },
+    headers,
     signal: abortSignal ?? null,
     body,
   });
