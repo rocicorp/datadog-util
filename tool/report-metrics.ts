@@ -58,7 +58,7 @@ for (let i = 0; i < NUM_CLIENTS; i++) {
 // Each client has its own Gauge.
 const latencies = [];
 for (let i = 0; i < NUM_CLIENTS; i++) {
-  const l = metrics[i].gauge('test_latency_ms');
+  const l = metrics[i].gauge('time_to_connect_ms');
   l.set(LATENCY_NEVER_MS);
   latencies.push(l);
 }

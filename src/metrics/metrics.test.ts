@@ -15,8 +15,6 @@ let fetchSpy: SpyInstance<typeof fetch>;
 
 beforeEach(() => {
   jest.useFakeTimers();
-  // Note: systemTime is in ms, metric timestamps are in seconds, so
-  // we should expect metrics have timestamp 42.
   jest.setSystemTime(42123);
   fetchSpy = jest
     .spyOn(globalThis, 'fetch')
@@ -33,7 +31,6 @@ test('Reporter reports', () => {
   // Note: it only reports if there is data to report.
   const m = newMetricsWithDataToReport();
   const g = m.gauge('name');
-  const expectedSeries = [g.flush()];
   const headers = {[DD_AUTH_HEADER_NAME]: 'apiKey'};
   new Reporter({
     url: DD_DISTRIBUTION_METRIC_URL,
@@ -43,6 +40,7 @@ test('Reporter reports', () => {
   });
 
   jest.advanceTimersByTime(1000);
+  const expectedSeries = [g.flush()];
 
   expect(fetchSpy).toHaveBeenCalledTimes(1);
   expect(fetchSpy).toHaveBeenCalledWith(DD_DISTRIBUTION_METRIC_URL, {
@@ -165,6 +163,7 @@ test('Metrics.flush', () => {
   ]);
 
   // Change the system time and add a new gauge.
+  // Both gauges should have the current time.
   jest.setSystemTime(43123);
   const g2 = m.gauge('other-name');
   g2.set(4);
@@ -172,7 +171,7 @@ test('Metrics.flush', () => {
   expect(m.flush()).toEqual([
     {
       metric: 'name',
-      points: [[42, [3]]],
+      points: [[43, [3]]],
     },
     {
       metric: 'other-name',
@@ -190,7 +189,7 @@ test('Metrics.flush', () => {
     },
     {
       metric: 'other-name',
-      points: [[43, [4]]],
+      points: [[44, [4]]],
     },
   ]);
 });

@@ -190,27 +190,31 @@ function newDatadagPoint(ts: number, value: number): DatadogPoint {
  */
 export class Gauge {
   private readonly _name: string;
-  private _point: DatadogPoint | undefined = undefined;
+  private _value: number | undefined = undefined;
 
   constructor(name: string) {
     this._name = name;
   }
 
   public set(value: number) {
-    this._point = newDatadagPoint(t(), value);
+    this._value = value;
   }
 
   public flush(): DatadogSeries {
-    // We don't want to alias the internal state so we return a copy.
-    const points: DatadogPoint[] =
-      this._point === undefined ? [] : [[this._point[0], [this._point[1][0]]]];
+    // Gauge reports the timestamp at flush time, not at the point the value was
+    // recorded.
+    const points =
+      this._value === undefined ? [] : [newDatadagPoint(t(), this._value)];
     return {metric: this._name, points};
   }
 }
 
-export function gaugeValue(
-  series: DatadogSeries,
-): {tsSec: number; value: number} | undefined {
+export function gaugeValue(series: DatadogSeries):
+  | {
+      tsSec: number; // We use ms everywhere for consistency but Datadog uses seconds :(
+      value: number;
+    }
+  | undefined {
   if (series.points.length === 0) {
     return undefined;
   }
