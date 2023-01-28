@@ -7,6 +7,7 @@ import {
   gaugeValue,
   DD_AUTH_HEADER_NAME,
   DD_DISTRIBUTION_METRIC_URL,
+  State,
 } from './metrics.js';
 import {Response} from 'cross-fetch';
 import {OptionalLoggerImpl} from '@rocicorp/logger';
@@ -146,6 +147,19 @@ test('Metrics.gauge', () => {
   expect(g1).not.toBe(g3);
 });
 
+test('Metrics.state', () => {
+  const m = new Metrics();
+
+  // Same name/prefix should return the same state.
+  const s1 = m.state('name');
+  const s2 = m.state('name');
+  expect(s1).toBe(s2);
+
+  // Different name/prefix should return different State.
+  const s3 = m.gauge('some-other-name');
+  expect(s1).not.toBe(s3);
+});
+
 test('Metrics.flush', () => {
   const m = new Metrics();
 
@@ -192,6 +206,31 @@ test('Metrics.flush', () => {
       points: [[44, [4]]],
     },
   ]);
+
+  // Ensure states are included.
+  const s1 = m.state('s1');
+  s1.set('1');
+  const s2 = m.state('s2');
+  s2.set('2');
+  m.state('s3');
+  expect(m.flush()).toEqual([
+    {
+      metric: 'name',
+      points: [[44, [5]]],
+    },
+    {
+      metric: 'other-name',
+      points: [[44, [4]]],
+    },
+    {
+      metric: 's1_1',
+      points: [[44, [1]]],
+    },
+    {
+      metric: 's2_2',
+      points: [[44, [1]]],
+    },
+  ]);
 });
 
 test('Gauge', () => {
@@ -229,7 +268,57 @@ test('gaugeValue', () => {
 
   g.set(3);
   expect(gaugeValue(g.flush())).toMatchObject({
+    metric: 'name',
     tsSec: 42,
     value: 3,
   });
+});
+
+test('State', () => {
+  const s = new State('foo');
+  expect(s.flush()).toEqual(undefined);
+
+  // Clearing an empty state should not add anything.
+  s.clear();
+  expect(s.flush()).toEqual(undefined);
+
+  // Set a state.
+  s.set('1');
+  expect(s.flush()).toMatchObject({
+    metric: 'foo_1',
+    points: [[42, [1]]],
+  });
+  // Ensure it is not cleared on flush.
+  expect(s.flush()).toMatchObject({
+    metric: 'foo_1',
+    points: [[42, [1]]],
+  });
+
+  // Set it again at a later time.
+  jest.setSystemTime(43 * 1000);
+  s.set('1');
+  expect(s.flush()).toMatchObject({
+    metric: 'foo_1',
+    points: [[43, [1]]],
+  });
+
+  // Set a different state.
+  s.set('2');
+  expect(s.flush()).toMatchObject({
+    metric: 'foo_2',
+    points: [[43, [1]]],
+  });
+
+  // Clear it.
+  s.clear();
+  expect(s.flush()).toEqual(undefined);
+
+  // Test clearOnFlush.
+  const s2 = new State('foo', true /* clearOnFlush */);
+  s2.set('1');
+  expect(s2.flush()).toMatchObject({
+    metric: 'foo_1',
+    points: [[43, [1]]],
+  });
+  expect(s2.flush()).toEqual(undefined);
 });
