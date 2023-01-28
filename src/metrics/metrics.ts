@@ -11,8 +11,7 @@ export interface ReporterOptions {
   abortSignal?: AbortSignal | undefined;
   // If a OptionalLogger is not provided, the Reporter is silent.
   optionalLogger?: OptionalLogger | undefined;
-  // TODO Should probably also take tags (eg, env, version). Will
-  // probalby need to take host and service too for the server side.
+  // Note: tags are taken at the Metrics level.
 }
 
 /**
@@ -90,7 +89,16 @@ export class Reporter {
 // Datadog only counts a single point per second per metric for non-distribution
 // metric types. (It expects that they have been pre-aggregated eg by statsd.)
 // So if we submitted non-distribution metrics and two clients (or DOs)
-// reported a metric in the same second, we'd lose one of them.
+// reported a metric in the same second, we'd lose one of them. And also, the HTTP
+// API does not support the rich set of statsd-supported metrics like Sets. Distribution,
+// count, and rate is all you get, an distribution is the easiest to aggregate.
+//
+// API we use:
+//   https://docs.datadoghq.com/api/latest/metrics/#submit-distribution-points
+// More on aggregation:
+//   https://docs.datadoghq.com/developers/dogstatsd/data_aggregation/#why-aggregate-metrics
+// Constraints on submission types (see "API" rows):
+//   https://docs.datadoghq.com/metrics/types/?tab=count#submission-types-and-datadog-in-app-types
 export const DD_DISTRIBUTION_METRIC_URL =
   'https://api.datadoghq.com/api/v1/distribution_points';
 export const DD_AUTH_HEADER_NAME = 'DD-API-KEY';
@@ -131,6 +139,14 @@ export async function report(
 export class Metrics {
   private _gauges: Map<string, Gauge> = new Map();
   private _states: Map<string, State> = new Map();
+  // Possibly tags should be per-metric, but for now we just have one set.
+  // Background: https://docs.datadoghq.com/getting_started/tagging/
+  // TODO should probably have host and service as well for the server side.
+  private readonly _tags: string[];
+
+  constructor(tags: string[] = []) {
+    this._tags = tags;
+  }
 
   // gauge returns a gauge with the given name. If a gauge with that name
   // already exists, it is returned.
@@ -160,11 +176,17 @@ export class Metrics {
     const allSeries: DatadogSeries[] = [];
     for (const gauge of this._gauges.values()) {
       const series = gauge.flush();
+      if (this._tags.length > 0) {
+        series.tags = this._tags;
+      }
       allSeries.push(series);
     }
     for (const state of this._states.values()) {
       const series = state.flush();
       if (series !== undefined) {
+        if (this._tags.length > 0) {
+          series.tags = this._tags;
+        }
         allSeries.push(series);
       }
     }
@@ -178,6 +200,7 @@ export class Metrics {
 export type DatadogSeries = {
   metric: string; // We call this 'name' bc 'metric' is overloaded in code.
   points: DatadogPoint[];
+  tags?: string[];
 };
 /**
  * A point is a second-resolution timestamp and a set of values for that

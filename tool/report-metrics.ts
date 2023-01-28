@@ -17,6 +17,8 @@ import {
 // and a rollup over the sample period. For example, if the sample interval is 20s,
 // you can compute the number of clients with latency <20s using:
 //    count(v: v<=20000):test_latency_ms{*}.as_count().rollup(20)
+//       or with tags:
+//    count(v: v<=20000):test_latency_ms{service:foo,env:prod}.as_count().rollup(20)
 // Note you probably have to enable advanced:percentiles for the metric, you can
 // do so in datadog under Metrics > Summary after searching for 'test_latency_ms'.
 //
