@@ -1,7 +1,7 @@
 {
   "name": "@rocicorp/datadog-util",
   "description": "Datadog utilities",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "repository": "github:rocicorp/datadog-util",
   "license": "SEE LICENSE IN https://roci.dev/terms.html",
   "main": "out/datadog-utils.js",
