@@ -5,6 +5,7 @@ export {
   ReporterOptions,
   DatadogPoint,
   DatadogSeries,
+  State,
   gaugeValue,
   report,
   DD_DISTRIBUTION_METRIC_URL,

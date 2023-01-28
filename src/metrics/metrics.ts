@@ -129,8 +129,8 @@ export async function report(
  * to a format suitable for reporting to Datadog.
  */
 export class Metrics {
-  // We currently only support Gauge metrics.
   private _gauges: Map<string, Gauge> = new Map();
+  private _states: Map<string, State> = new Map();
 
   // gauge returns a gauge with the given name. If a gauge with that name
   // already exists, it is returned.
@@ -143,6 +143,17 @@ export class Metrics {
     return gauge;
   }
 
+  // state returns a state with the given name. If a state with that name
+  // already exists, it is returned.
+  public state(name: string, clearOnFlush = false) {
+    let state = this._states.get(name);
+    if (state === undefined) {
+      state = new State(name, clearOnFlush);
+      this._states.set(name, state);
+    }
+    return state;
+  }
+
   // Flushes all metrics to an array of time series (plural), one DatadogSeries
   // per metric.
   public flush(): DatadogSeries[] {
@@ -150,6 +161,12 @@ export class Metrics {
     for (const gauge of this._gauges.values()) {
       const series = gauge.flush();
       allSeries.push(series);
+    }
+    for (const state of this._states.values()) {
+      const series = state.flush();
+      if (series !== undefined) {
+        allSeries.push(series);
+      }
     }
     return allSeries;
   }
@@ -211,6 +228,7 @@ export class Gauge {
 
 export function gaugeValue(series: DatadogSeries):
   | {
+      metric: string;
       tsSec: number; // We use ms everywhere for consistency but Datadog uses seconds :(
       value: number;
     }
@@ -218,9 +236,57 @@ export function gaugeValue(series: DatadogSeries):
   if (series.points.length === 0) {
     return undefined;
   }
-  return {tsSec: series.points[0][0], value: series.points[0][1][0]};
+  return {
+    metric: series.metric,
+    tsSec: series.points[0][0],
+    value: series.points[0][1][0],
+  };
 }
 
 function t() {
   return Math.round(Date.now() / 1000);
+}
+
+/**
+ * State is a metric type that represents a specific state that the system is
+ * in, for exmaple the state of a connection. The state is given a name/prefix
+ * at construction time and then can be set to a specific state. The prefix
+ * is prepended to the specific state and a value of 1 is reported. Unset/cleared
+ * states are not reported.
+ *
+ * Example:
+ *   const s = new State('connection');
+ *   s.set('open');
+ *   s.flush(); // returns {metric: 'connection_open', points: [[now(), [1]]]}
+ */
+export class State {
+  private readonly _prefix: string;
+  private readonly _clearOnFlush: boolean;
+  private _current: string | undefined = undefined;
+
+  constructor(prefix: string, clearOnFlush = false) {
+    this._prefix = prefix;
+    this._clearOnFlush = clearOnFlush;
+  }
+
+  public set(state: string) {
+    this._current = state;
+  }
+
+  public clear() {
+    this._current = undefined;
+  }
+
+  public flush(): DatadogSeries | undefined {
+    if (this._current === undefined) {
+      return undefined;
+    }
+    const gauge = new Gauge([this._prefix, this._current].join('_'));
+    gauge.set(1);
+    const series = gauge.flush();
+    if (this._clearOnFlush) {
+      this.clear();
+    }
+    return series;
+  }
 }
