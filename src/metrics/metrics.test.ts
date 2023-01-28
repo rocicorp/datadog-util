@@ -233,6 +233,28 @@ test('Metrics.flush', () => {
   ]);
 });
 
+test('Metrics.flush inserts tags', () => {
+  const m = new Metrics(['tag:value']);
+
+  const g1 = m.gauge('name1');
+  g1.set(1);
+  const g2 = m.gauge('name2');
+  g2.set(2);
+
+  expect(m.flush()).toEqual([
+    {
+      metric: 'name1',
+      points: [[42, [1]]],
+      tags: ['tag:value'],
+    },
+    {
+      metric: 'name2',
+      points: [[42, [2]]],
+      tags: ['tag:value'],
+    },
+  ]);
+});
+
 test('Gauge', () => {
   const g = new Gauge('name');
   expect(g.flush()).toMatchObject({
