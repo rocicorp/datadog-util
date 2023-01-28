@@ -249,10 +249,11 @@ function t() {
 
 /**
  * State is a metric type that represents a specific state that the system is
- * in, for exmaple the state of a connection. The state is given a name/prefix
- * at construction time and then can be set to a specific state. The prefix
- * is prepended to the specific state and a value of 1 is reported. Unset/cleared
- * states are not reported.
+ * in, for example the state of a connection which may be 'open' or 'closed'.
+ * The state is given a name/prefix at construction time (eg 'connection') and
+ * then can be set to a specific state (eg 'open'). The prefix is prepended to
+ * the set state (eg, 'connection_open') and a value of 1 is reported.
+ * Unset/cleared states are not reported.
  *
  * Example:
  *   const s = new State('connection');

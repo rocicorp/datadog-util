@@ -156,7 +156,7 @@ test('Metrics.state', () => {
   expect(s1).toBe(s2);
 
   // Different name/prefix should return different State.
-  const s3 = m.gauge('some-other-name');
+  const s3 = m.state('some-other-name');
   expect(s1).not.toBe(s3);
 });
 
