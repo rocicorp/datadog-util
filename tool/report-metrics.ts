@@ -36,11 +36,11 @@ import {
 // close to NUM_CLIENTS.
 //
 // It also sends last_connect_error with half the clients starting in a random error
-// state and then each period having one client either clear its error if any or 
+// state and then each period having one client either clear its error if any or
 // pick a new error with p 0.5.
 //
 // Note that the datadog endpoint does not support CORS so this works from the command
-// line but will not work directly from the browser. In the browser we proxy calls 
+// line but will not work directly from the browser. In the browser we proxy calls
 // through reflect server.
 //
 // IMPORTANT NOTE: the reporting interval here is 10s so rollup on the graph needs to
@@ -90,10 +90,9 @@ for (let i = 0; i < NUM_CLIENTS; i++) {
 
   const lce = metrics[i].state('last_connect_error');
   lces.push(lce);
-  if (i < NUM_CLIENTS/2) {
-    lce.set(LAST_CONNECT_ERRORS[randInt(0, LAST_CONNECT_ERRORS.length-1)]);
+  if (i < NUM_CLIENTS / 2) {
+    lce.set(LAST_CONNECT_ERRORS[randInt(0, LAST_CONNECT_ERRORS.length - 1)]);
   }
-
 }
 
 for (;;) {
@@ -121,7 +120,7 @@ for (;;) {
   if (randInt(0, 1) == 0) {
     lce.clear();
   } else {
-    lce.set(LAST_CONNECT_ERRORS[randInt(0, LAST_CONNECT_ERRORS.length-1)]);
+    lce.set(LAST_CONNECT_ERRORS[randInt(0, LAST_CONNECT_ERRORS.length - 1)]);
   }
 
   await sleep(SAMPLE_INTERVAL_MS);
